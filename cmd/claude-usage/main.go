@@ -10,11 +10,19 @@ import (
 	"github.com/tonydisco/claude-usage/internal/cli"
 )
 
-// Version is overridden at build time via -ldflags="-X main.Version=..."
-var Version = "dev"
+// Overridden at build time via goreleaser ldflags (see .goreleaser.yml).
+var (
+	version = "dev"
+	commit  = ""
+	date    = ""
+)
 
 func main() {
-	if err := cli.Execute(Version); err != nil {
+	v := version
+	if commit != "" {
+		v = fmt.Sprintf("%s (%s, %s)", version, commit, date)
+	}
+	if err := cli.Execute(v); err != nil {
 		fmt.Fprintln(os.Stderr, "claude-usage:", err)
 		os.Exit(1)
 	}
