@@ -36,6 +36,10 @@ func newStatusCmd() *cobra.Command {
 
 // snapshot loads config + credential and fetches one Usage value.
 // Shared by status, prompt, watch.
+//
+// When cfg.OrgID is empty and we're not in mock mode, snapshot calls
+// /api/organizations once, persists the discovered UUID to config, and
+// continues. Subsequent calls skip the lookup.
 func snapshot(ctx context.Context, mock bool) (*fetcher.Usage, config.Config, error) {
 	cfg, err := config.Load()
 	if err != nil {
@@ -51,6 +55,19 @@ func snapshot(ctx context.Context, mock bool) (*fetcher.Usage, config.Config, er
 			return nil, cfg, err
 		}
 		client.SessionCookie = cookie
+
+		if cfg.OrgID == "" {
+			orgID, err := client.FetchOrgID(ctx)
+			if err != nil {
+				return nil, cfg, fmt.Errorf("auto-detect org_id: %w (set manually with `claude-usage config set org_id <id>`)", err)
+			}
+			cfg.OrgID = orgID
+			client.OrgID = orgID
+			if saveErr := config.Save(cfg); saveErr != nil {
+				// Non-fatal: detection worked, just won't be cached.
+				fmt.Fprintf(os.Stderr, "warning: could not save org_id to config: %v\n", saveErr)
+			}
+		}
 	}
 
 	u, err := client.Fetch(ctx)

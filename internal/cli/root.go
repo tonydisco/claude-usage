@@ -18,6 +18,7 @@ func Execute(version string) error {
 
 	root.AddCommand(
 		newStatusCmd(),
+		newWatchCmd(),
 		newPromptCmd(),
 		newLoginCmd(),
 		newLogoutCmd(),
