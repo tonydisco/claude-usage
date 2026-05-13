@@ -22,6 +22,7 @@ func (c *Client) FetchOrgID(ctx context.Context) (string, error) {
 	}
 	req.Header.Set("User-Agent", c.UserAgent)
 	req.Header.Set("Accept", "application/json")
+	req.Header.Set("anthropic-client-platform", "web_claude_ai")
 	req.AddCookie(&http.Cookie{Name: "sessionKey", Value: c.SessionCookie})
 
 	resp, err := c.HTTP.Do(req)

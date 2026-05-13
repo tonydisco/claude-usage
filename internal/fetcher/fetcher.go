@@ -3,9 +3,8 @@
 // This is the ONE file that needs patching when Anthropic changes the
 // endpoint shape. Keep it small and self-contained.
 //
-// Status: Phase 0 (endpoint reconnaissance) is still TODO. Until the real
-// endpoint URL/headers are confirmed, callers should pass WithMock(true)
-// to drive UI work against samples/usage-response.json.
+// Endpoint captured 2026-05-13 from claude.ai/settings/usage:
+//   GET https://claude.ai/api/organizations/<org_uuid>/usage
 package fetcher
 
 import (
@@ -19,7 +18,6 @@ import (
 	"time"
 )
 
-// TODO(phase-0): replace once the real endpoint is captured from DevTools.
 const usageEndpoint = "https://claude.ai/api/organizations/%s/usage"
 
 // Default User-Agent. claude.ai serves different responses to obviously-bot
@@ -89,6 +87,9 @@ func (c *Client) fetchHTTP(ctx context.Context) (*Usage, error) {
 	}
 	req.Header.Set("User-Agent", c.UserAgent)
 	req.Header.Set("Accept", "application/json")
+	// Header observed on real requests; the API rejects calls without it.
+	req.Header.Set("anthropic-client-platform", "web_claude_ai")
+	req.Header.Set("Referer", "https://claude.ai/settings/usage")
 	req.AddCookie(&http.Cookie{Name: "sessionKey", Value: c.SessionCookie})
 
 	resp, err := c.HTTP.Do(req)

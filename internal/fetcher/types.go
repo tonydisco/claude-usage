@@ -4,14 +4,15 @@ import "time"
 
 // Usage is the normalized snapshot returned by Fetch.
 //
-// The fields mirror the four buckets visible on claude.ai Settings -> Usage.
-// If Anthropic adds or renames a bucket, extend this struct and the JSON
-// shape in fetcher.go in one place.
+// Fields map to claude.ai /api/organizations/<id>/usage payload (captured
+// 2026-05-13). Bucket objects in that payload can be either {utilization,
+// resets_at} or JSON null; both decode to a zero-valued Bucket here, which
+// renderers treat as 0% / "no reset known".
 type Usage struct {
-	Session Bucket `json:"current_session"`
-	Weekly  Bucket `json:"weekly_all_models"`
-	Sonnet  Bucket `json:"weekly_sonnet"`
-	Design  Bucket `json:"weekly_design"`
+	Session Bucket `json:"five_hour"`
+	Weekly  Bucket `json:"seven_day"`
+	Sonnet  Bucket `json:"seven_day_sonnet"`
+	Design  Bucket `json:"seven_day_omelette"`
 
 	// FetchedAt is set by the fetcher; not part of the upstream payload.
 	FetchedAt time.Time `json:"-"`
@@ -19,7 +20,7 @@ type Usage struct {
 
 // Bucket is one row on the Usage page.
 type Bucket struct {
-	PercentUsed float64   `json:"percent_used"`
+	PercentUsed float64   `json:"utilization"`
 	ResetsAt    time.Time `json:"resets_at"`
 }
 
