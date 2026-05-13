@@ -7,7 +7,6 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strconv"
-	"syscall"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -53,8 +52,8 @@ func daemonStartCmd() *cobra.Command {
 			}
 			c := exec.Command(exe, "tray")
 			// Detach from this terminal so closing the shell doesn't
-			// kill the tray.
-			c.SysProcAttr = &syscall.SysProcAttr{Setsid: true}
+			// kill the tray. Platform-specific (see daemon_*.go).
+			detach(c)
 			c.Stdout = nil
 			c.Stderr = nil
 			c.Stdin = nil
@@ -93,7 +92,7 @@ func daemonStopCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			if err := p.Signal(syscall.SIGTERM); err != nil {
+			if err := terminate(p); err != nil {
 				return fmt.Errorf("signal pid %d: %w", pid, err)
 			}
 			// Give it up to 2s to exit cleanly.
@@ -145,9 +144,7 @@ func readPID(path string) (int, bool) {
 	if err != nil {
 		return 0, false
 	}
-	// Signal 0 = liveness probe on Unix; on Windows FindProcess
-	// already returns an error if dead.
-	if err := p.Signal(syscall.Signal(0)); err != nil {
+	if !alive(p) {
 		return 0, false
 	}
 	return pid, true
