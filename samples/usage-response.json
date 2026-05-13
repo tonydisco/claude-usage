@@ -1,0 +1,19 @@
+{
+  "_comment": "Placeholder. Replace after Phase 0 reconnaissance with a real response from claude.ai Settings -> Usage. See internal/fetcher/fetcher.go for the struct it must unmarshal into.",
+  "current_session": {
+    "percent_used": 51.0,
+    "resets_at": "2026-05-13T16:05:00Z"
+  },
+  "weekly_all_models": {
+    "percent_used": 13.0,
+    "resets_at": "2026-05-17T15:00:00Z"
+  },
+  "weekly_sonnet": {
+    "percent_used": 0.0,
+    "resets_at": "2026-05-17T15:00:00Z"
+  },
+  "weekly_design": {
+    "percent_used": 0.0,
+    "resets_at": "2026-05-17T15:00:00Z"
+  }
+}

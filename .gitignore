@@ -1,0 +1,22 @@
+# Binaries
+/claude-usage
+/dist/
+*.exe
+
+# Go
+*.test
+*.out
+vendor/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.idea/
+.vscode/
+*.swp
+
+# Local state
+*.local.toml
+.claude/settings.local.json
