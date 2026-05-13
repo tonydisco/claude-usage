@@ -54,6 +54,7 @@ changelog:
 
 brews:
   - name: claude-usage
+    skip_upload: auto
     repository:
       owner: tonydisco
       name: homebrew-tap
