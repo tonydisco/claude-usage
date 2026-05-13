@@ -20,6 +20,8 @@ func Execute(version string) error {
 		newStatusCmd(),
 		newWatchCmd(),
 		newPromptCmd(),
+		newTrayCmd(),
+		newDaemonCmd(),
 		newLoginCmd(),
 		newLogoutCmd(),
 		newConfigCmd(),
