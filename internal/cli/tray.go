@@ -61,7 +61,7 @@ type trayApp struct {
 }
 
 func (t *trayApp) onReady() {
-	systray.SetTitle("…")
+	systray.SetTitle("")
 	systray.SetTooltip("claude-usage — loading")
 	t.notified = map[string]int{}
 
@@ -141,7 +141,7 @@ func (t *trayApp) fetchAndUpdate() {
 
 	if err != nil {
 		systray.SetIcon(renderMenuBarIcon(0, cfg))
-		systray.SetTitle(" !")
+		systray.SetTitle("")
 		systray.SetTooltip("claude-usage: " + err.Error())
 		t.headerM.SetTitle("claude-usage — error")
 		for _, mi := range t.bucketM {
@@ -153,7 +153,7 @@ func (t *trayApp) fetchAndUpdate() {
 
 	worst := worstBucket(u)
 	systray.SetIcon(renderMenuBarIcon(worst.PercentUsed, cfg))
-	systray.SetTitle(fmt.Sprintf(" %.0f%%", worst.PercentUsed))
+	systray.SetTitle("")
 	systray.SetTooltip(tooltipFor(u))
 	t.headerM.SetTitle(fmt.Sprintf("claude-usage  —  worst: %.0f%%", worst.PercentUsed))
 	for _, nb := range u.Buckets() {

@@ -1,6 +1,6 @@
 module github.com/tonydisco/claude-usage
 
-go 1.24.0
+go 1.25.0
 
 require (
 	fyne.io/systray v1.12.1
@@ -10,6 +10,7 @@ require (
 	github.com/gen2brain/beeep v0.11.2
 	github.com/spf13/cobra v1.8.1
 	github.com/zalando/go-keyring v0.2.5
+	golang.org/x/image v0.40.0
 	golang.org/x/term v0.20.0
 )
 
@@ -43,5 +44,5 @@ require (
 	github.com/tadvi/systray v0.0.0-20190226123456-11a2b8fa57af // indirect
 	github.com/xo/terminfo v0.0.0-20220910002029-abceb7e1c41e // indirect
 	golang.org/x/sys v0.36.0 // indirect
-	golang.org/x/text v0.3.8 // indirect
+	golang.org/x/text v0.37.0 // indirect
 )
