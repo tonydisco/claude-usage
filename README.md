@@ -33,6 +33,14 @@ curl -fsSL https://raw.githubusercontent.com/tonydisco/claude-usage/main/install
 
 > Binaries are signed and published from GitHub Actions via `goreleaser`. Source: [`/.github/workflows/release.yml`](.github/workflows/release.yml).
 
+> **Tray / daemon need a CGO build.** The release binaries above ship with `CGO_ENABLED=0` for clean cross-compilation, so `claude-usage tray` and `claude-usage daemon start` are stubs in those builds. For the working menu-bar icon and background daemon, install from source on macOS/Linux:
+>
+> ```bash
+> go install github.com/tonydisco/claude-usage/cmd/claude-usage@latest
+> ```
+>
+> Everything else (`status`, `watch`, `prompt`, `login`, etc.) works in both build modes.
+
 ## Quick start
 
 ```bash
@@ -118,9 +126,9 @@ The fetcher is isolated in [`internal/fetcher`](internal/fetcher) so endpoint pa
 
 - [x] Phase 0 — Endpoint reconnaissance (see [`samples/usage-response.json`](samples/usage-response.json))
 - [x] Phase 1 — Core CLI (`login`, `status`, `logout`)
-- [ ] Phase 2 — TUI (`watch`) + shell prompt + oh-my-zsh plugin
-- [ ] Phase 3 — Daemon + tray icon + threshold notifications
-- [ ] Phase 4 — Homebrew tap, Scoop bucket, install script, signed binaries
+- [x] Phase 2 — TUI (`watch`) + shell prompt + oh-my-zsh plugin
+- [x] Phase 3 — Daemon + tray icon + threshold notifications
+- [x] Phase 4 — Homebrew tap + install script *(Scoop bucket and Apple notarization pending)*
 
 ## Contributing
 

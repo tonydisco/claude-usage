@@ -23,11 +23,15 @@ type Config struct {
 }
 
 // Default returns the baseline config.
+//
+// Thresholds use a battery-style palette: green below WarnThreshold,
+// orange between, red at or above AlertThreshold. Defaults are tuned
+// to give a margin of about 35% to warn and 10% to act.
 func Default() Config {
 	return Config{
 		PollIntervalSeconds: 60,
-		WarnThreshold:       80,
-		AlertThreshold:      95,
+		WarnThreshold:       65,
+		AlertThreshold:      90,
 		Notify:              true,
 	}
 }

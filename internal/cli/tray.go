@@ -5,6 +5,8 @@ package cli
 import (
 	"context"
 	"fmt"
+	"os/exec"
+	"runtime"
 	"sync"
 	"time"
 
@@ -16,13 +18,20 @@ import (
 	"github.com/tonydisco/claude-usage/internal/fetcher"
 )
 
+const dashboardURL = "https://claude.ai/settings/usage"
+
 func newTrayCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "tray",
 		Short: "Run as a system tray icon (foreground; use `daemon start` to detach)",
-		Long: `Run a small system tray icon that shows current Claude.ai plan
-usage and refreshes on the configured poll interval. Notifies once
-per bucket when warn_threshold or alert_threshold is crossed.
+		Long: `Run a small menu-bar icon that summarizes Claude.ai plan usage and
+auto-refreshes on the configured poll interval.
+
+Clicking the icon opens a battery-style detail panel with one line
+per bucket (Session / Weekly / Sonnet / Design), the next reset
+time, and shortcuts to refresh or open the dashboard. A desktop
+notification fires once per bucket when warn_threshold or
+alert_threshold is crossed.
 
 Quit from the tray menu or with Ctrl-C.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -38,24 +47,46 @@ type trayApp struct {
 	ctx  context.Context
 	mock bool
 
-	mu        sync.Mutex
-	cfg       config.Config
-	notified  map[string]int // bucket -> last notified level (0/warn=1/alert=2)
-	quitMenu  *systray.MenuItem
-	refresh   *systray.MenuItem
-	statusM   *systray.MenuItem
-	lastError error
+	mu       sync.Mutex
+	cfg      config.Config
+	notified map[string]int // bucket -> last notified level (0/warn=1/alert=2)
+
+	// Menu items — fixed slots that we mutate via SetTitle on each refresh.
+	headerM    *systray.MenuItem
+	bucketM    map[string]*systray.MenuItem
+	lastM      *systray.MenuItem
+	refreshM   *systray.MenuItem
+	dashboardM *systray.MenuItem
+	quitM      *systray.MenuItem
 }
 
 func (t *trayApp) onReady() {
 	systray.SetTitle("CU …")
 	systray.SetTooltip("claude-usage — loading")
-	t.statusM = systray.AddMenuItem("Loading…", "")
-	t.statusM.Disable()
-	systray.AddSeparator()
-	t.refresh = systray.AddMenuItem("Refresh now", "Fetch latest usage")
-	t.quitMenu = systray.AddMenuItem("Quit", "Stop the tray")
 	t.notified = map[string]int{}
+
+	// Header — like "Battery 100%" on the macOS menu.
+	t.headerM = systray.AddMenuItem("claude-usage — loading", "")
+	t.headerM.Disable()
+	systray.AddSeparator()
+
+	// One disabled item per bucket; populated on first fetch.
+	t.bucketM = map[string]*systray.MenuItem{}
+	for _, name := range []string{"Session", "Weekly", "Sonnet", "Design"} {
+		mi := systray.AddMenuItem(name+"  —  …", "")
+		mi.Disable()
+		t.bucketM[name] = mi
+	}
+	systray.AddSeparator()
+
+	t.lastM = systray.AddMenuItem("Last update: —", "")
+	t.lastM.Disable()
+	systray.AddSeparator()
+
+	t.refreshM = systray.AddMenuItem("Refresh now", "Fetch latest usage")
+	t.dashboardM = systray.AddMenuItem("Open dashboard…", "Open claude.ai usage page in browser")
+	systray.AddSeparator()
+	t.quitM = systray.AddMenuItem("Quit", "Stop the tray")
 
 	go t.loop()
 	go t.menuLoop()
@@ -66,9 +97,11 @@ func (t *trayApp) onExit() {}
 func (t *trayApp) menuLoop() {
 	for {
 		select {
-		case <-t.refresh.ClickedCh:
+		case <-t.refreshM.ClickedCh:
 			t.fetchAndUpdate()
-		case <-t.quitMenu.ClickedCh:
+		case <-t.dashboardM.ClickedCh:
+			_ = openURL(dashboardURL)
+		case <-t.quitM.ClickedCh:
 			systray.Quit()
 			return
 		case <-t.ctx.Done():
@@ -105,22 +138,59 @@ func (t *trayApp) fetchAndUpdate() {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 	t.cfg = cfg
-	t.lastError = err
 
 	if err != nil {
 		systray.SetTitle("CU !")
 		systray.SetTooltip("claude-usage: " + err.Error())
-		t.statusM.SetTitle("Error: " + err.Error())
+		t.headerM.SetTitle("claude-usage — error")
+		for _, mi := range t.bucketM {
+			mi.SetTitle("(unavailable)")
+		}
+		t.lastM.SetTitle("Last update: failed — " + err.Error())
 		return
 	}
 
 	worst := worstBucket(u)
-	systray.SetTitle(fmt.Sprintf("CU %.0f%%", worst.PercentUsed))
+	systray.SetTitle(fmt.Sprintf("%s CU %.0f%%", bandEmoji(worst.PercentUsed, cfg), worst.PercentUsed))
 	systray.SetTooltip(tooltipFor(u))
-	t.statusM.SetTitle(fmt.Sprintf("Session %.0f%%  ·  Weekly %.0f%%", u.Session.PercentUsed, u.Weekly.PercentUsed))
+	t.headerM.SetTitle(fmt.Sprintf("claude-usage  —  worst: %.0f%%", worst.PercentUsed))
+	for _, nb := range u.Buckets() {
+		if mi, ok := t.bucketM[nb.Name]; ok {
+			mi.SetTitle(formatBucketLine(nb, cfg))
+		}
+	}
+	t.lastM.SetTitle("Last update: " + time.Now().Local().Format("15:04:05"))
 
 	if cfg.Notify {
 		t.maybeNotify(u, cfg)
+	}
+}
+
+// formatBucketLine renders one row of the detail panel:
+//   "🟢 Session    16%   ·   resets in 3h 47m"
+func formatBucketLine(nb fetcher.NamedBucket, cfg config.Config) string {
+	label := pad(nb.Name, 8)
+	pct := fmt.Sprintf("%3.0f%%", nb.PercentUsed)
+	reset := resetHint(nb.ResetsAt)
+	emoji := bandEmoji(nb.PercentUsed, cfg)
+	if reset == "" {
+		return fmt.Sprintf("%s %s %s", emoji, label, pct)
+	}
+	return fmt.Sprintf("%s %s %s   %s", emoji, label, pct, reset)
+}
+
+// bandEmoji picks a colored circle to match the warn/alert bands.
+//   < warn   → green
+//   ≥ warn   → orange
+//   ≥ alert  → red
+func bandEmoji(pct float64, cfg config.Config) string {
+	switch {
+	case pct >= float64(cfg.AlertThreshold):
+		return "🔴"
+	case pct >= float64(cfg.WarnThreshold):
+		return "🟠"
+	default:
+		return "🟢"
 	}
 }
 
@@ -163,4 +233,22 @@ func (t *trayApp) maybeNotify(u *fetcher.Usage, cfg config.Config) {
 		}
 		_ = beeep.Notify(title, msg, "")
 	}
+}
+
+// openURL launches the OS's default handler for url.
+func openURL(url string) error {
+	var cmd string
+	var args []string
+	switch runtime.GOOS {
+	case "darwin":
+		cmd = "open"
+		args = []string{url}
+	case "windows":
+		cmd = "rundll32"
+		args = []string{"url.dll,FileProtocolHandler", url}
+	default: // linux, freebsd, etc.
+		cmd = "xdg-open"
+		args = []string{url}
+	}
+	return exec.Command(cmd, args...).Start()
 }

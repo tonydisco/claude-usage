@@ -80,14 +80,18 @@ func roundDuration(d time.Duration) string {
 	return fmt.Sprintf("%dm", int(d/time.Minute))
 }
 
+// Battery-style three-band coloring:
+//   green   below warn_threshold
+//   orange  between warn and alert
+//   red     at or above alert_threshold
 func colorFor(pct float64, warn, alert int) lipgloss.Style {
 	switch {
 	case pct >= float64(alert):
-		return lipgloss.NewStyle().Foreground(lipgloss.Color("9"))  // red
+		return lipgloss.NewStyle().Foreground(lipgloss.Color("9"))   // red
 	case pct >= float64(warn):
-		return lipgloss.NewStyle().Foreground(lipgloss.Color("11")) // yellow
+		return lipgloss.NewStyle().Foreground(lipgloss.Color("208")) // orange
 	default:
-		return lipgloss.NewStyle().Foreground(lipgloss.Color("10")) // green
+		return lipgloss.NewStyle().Foreground(lipgloss.Color("10"))  // green
 	}
 }
 
