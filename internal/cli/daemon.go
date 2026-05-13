@@ -38,6 +38,9 @@ func daemonStartCmd() *cobra.Command {
 		Use:   "start",
 		Short: "Launch the tray icon as a detached background process",
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if !trayAvailable() {
+				return errNoTray
+			}
 			pidPath, err := pidFilePath()
 			if err != nil {
 				return err
