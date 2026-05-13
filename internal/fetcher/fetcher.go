@@ -8,7 +8,9 @@
 package fetcher
 
 import (
+	"bytes"
 	"context"
+	_ "embed"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -17,6 +19,12 @@ import (
 	"os"
 	"time"
 )
+
+// Bundled mock response — used when no MockPath is set so release builds
+// can still serve --mock without the samples/ directory next to them.
+//
+//go:embed mock-usage.json
+var bundledMock []byte
 
 const usageEndpoint = "https://claude.ai/api/organizations/%s/usage"
 
@@ -60,11 +68,10 @@ func (c *Client) Fetch(ctx context.Context) (*Usage, error) {
 }
 
 func (c *Client) fetchMock() (*Usage, error) {
-	path := c.MockPath
-	if path == "" {
-		path = "samples/usage-response.json"
+	if c.MockPath == "" {
+		return decode(bytes.NewReader(bundledMock))
 	}
-	f, err := os.Open(path)
+	f, err := os.Open(c.MockPath)
 	if err != nil {
 		return nil, fmt.Errorf("open mock data: %w", err)
 	}
