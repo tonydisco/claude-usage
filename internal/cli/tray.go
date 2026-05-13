@@ -61,13 +61,9 @@ type trayApp struct {
 }
 
 func (t *trayApp) onReady() {
-	systray.SetTitle("CU …")
+	systray.SetTitle("…")
 	systray.SetTooltip("claude-usage — loading")
 	t.notified = map[string]int{}
-
-	// Promote the systray-only process to a regular Dock-visible app
-	// so we can paint a progress-bar icon there. No-op on Linux/Windows.
-	dockShow(true)
 
 	// Header — like "Battery 100%" on the macOS menu.
 	t.headerM = systray.AddMenuItem("claude-usage — loading", "")
@@ -144,7 +140,8 @@ func (t *trayApp) fetchAndUpdate() {
 	t.cfg = cfg
 
 	if err != nil {
-		systray.SetTitle("CU !")
+		systray.SetIcon(renderMenuBarIcon(0, cfg))
+		systray.SetTitle(" !")
 		systray.SetTooltip("claude-usage: " + err.Error())
 		t.headerM.SetTitle("claude-usage — error")
 		for _, mi := range t.bucketM {
@@ -155,9 +152,9 @@ func (t *trayApp) fetchAndUpdate() {
 	}
 
 	worst := worstBucket(u)
-	systray.SetTitle(fmt.Sprintf("%s CU %.0f%%", bandEmoji(worst.PercentUsed, cfg), worst.PercentUsed))
+	systray.SetIcon(renderMenuBarIcon(worst.PercentUsed, cfg))
+	systray.SetTitle(fmt.Sprintf(" %.0f%%", worst.PercentUsed))
 	systray.SetTooltip(tooltipFor(u))
-	dockSetIcon(renderDockIcon(u, cfg))
 	t.headerM.SetTitle(fmt.Sprintf("claude-usage  —  worst: %.0f%%", worst.PercentUsed))
 	for _, nb := range u.Buckets() {
 		if mi, ok := t.bucketM[nb.Name]; ok {
