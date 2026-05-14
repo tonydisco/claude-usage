@@ -7,12 +7,17 @@
 <!-- TODO: replace with vhs/asciinema gif -->
 <p align="center"><em>[demo gif goes here — record with vhs after Phase 1]</em></p>
 
+Numbers are battery-style: the percentage and bar represent how
+much capacity is **left** in each bucket (100% = untouched, 0% =
+at the plan ceiling). Threshold colors are still decided from raw
+usage so warn/alert fire at the same place they always did.
+
 ```text
 $ claude-usage status
-Session   ████████████░░░░░░░░  51%  (resets in 1h 5m)
-Weekly    ██░░░░░░░░░░░░░░░░░░  13%  (resets Sun 3:00 PM)
-Sonnet    ░░░░░░░░░░░░░░░░░░░░   0%
-Design    ░░░░░░░░░░░░░░░░░░░░   0%
+Session   █████████░░░░░░░░░░░  49%  (resets in 1h 5m)
+Weekly    █████████████████░░░  87%  (resets Sun 3:00 PM)
+Sonnet    ████████████████████ 100%
+Design    ████████████████████ 100%
 ```
 
 ---

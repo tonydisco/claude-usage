@@ -155,7 +155,7 @@ func (t *trayApp) fetchAndUpdate() {
 	setMenuBarIcon(worst.PercentUsed, cfg)
 	systray.SetTitle("")
 	systray.SetTooltip(tooltipFor(u))
-	t.headerM.SetTitle(fmt.Sprintf("claude-usage  —  worst: %.0f%%", worst.PercentUsed))
+	t.headerM.SetTitle(fmt.Sprintf("claude-usage  —  %.0f%% left", 100-worst.PercentUsed))
 	for _, nb := range u.Buckets() {
 		if mi, ok := t.bucketM[nb.Name]; ok {
 			mi.SetTitle(formatBucketLine(nb, cfg))
@@ -169,10 +169,14 @@ func (t *trayApp) fetchAndUpdate() {
 }
 
 // formatBucketLine renders one row of the detail panel:
-//   "🟢 Session    16%   ·   resets in 3h 47m"
+//   "🟢 Session    84%   ·   resets in 3h 47m"
+//
+// The shown percentage is battery-style "remaining" capacity; the
+// emoji color is still chosen from the raw usage so the thresholds
+// trigger consistently with notifications.
 func formatBucketLine(nb fetcher.NamedBucket, cfg config.Config) string {
 	label := pad(nb.Name, 8)
-	pct := fmt.Sprintf("%3.0f%%", nb.PercentUsed)
+	pct := fmt.Sprintf("%3.0f%%", 100-nb.PercentUsed)
 	reset := resetHint(nb.ResetsAt)
 	emoji := bandEmoji(nb.PercentUsed, cfg)
 	if reset == "" {
@@ -197,8 +201,9 @@ func bandEmoji(pct float64, cfg config.Config) string {
 }
 
 func tooltipFor(u *fetcher.Usage) string {
-	return fmt.Sprintf("Session %.0f%%  ·  Weekly %.0f%%  ·  Sonnet %.0f%%  ·  Design %.0f%%",
-		u.Session.PercentUsed, u.Weekly.PercentUsed, u.Sonnet.PercentUsed, u.Design.PercentUsed)
+	return fmt.Sprintf("Session %.0f%%  ·  Weekly %.0f%%  ·  Sonnet %.0f%%  ·  Design %.0f%%  (remaining)",
+		100-u.Session.PercentUsed, 100-u.Weekly.PercentUsed,
+		100-u.Sonnet.PercentUsed, 100-u.Design.PercentUsed)
 }
 
 func worstBucket(u *fetcher.Usage) fetcher.Bucket {
@@ -228,10 +233,10 @@ func (t *trayApp) maybeNotify(u *fetcher.Usage, cfg config.Config) {
 			continue
 		}
 		t.notified[nb.Name] = level
-		title := fmt.Sprintf("claude-usage: %s %.0f%%", nb.Name, nb.PercentUsed)
+		title := fmt.Sprintf("claude-usage: %s %.0f%% left", nb.Name, 100-nb.PercentUsed)
 		msg := "Approaching limit — claude.ai may rate-limit you soon."
 		if level == 2 {
-			msg = "Above alert threshold — limit may already be enforced."
+			msg = "Almost out — limit may already be enforced."
 		}
 		_ = beeep.Notify(title, msg, "")
 	}

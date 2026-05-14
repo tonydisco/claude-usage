@@ -20,9 +20,11 @@ func renderStatus(u *fetcher.Usage, warn, alert int, color bool) string {
 }
 
 // renderPrompt formats the two key buckets compactly for shell PS1.
-// Example: [51%/13%]
+// Numbers are battery-style "remaining" capacity (100% means untouched,
+// 0% means at the plan ceiling). Color band is decided from raw usage
+// so warn/alert thresholds keep their meaning. Example: [49%/87%]
 func renderPrompt(u *fetcher.Usage, warn, alert int, color bool) string {
-	s := fmt.Sprintf("[%.0f%%/%.0f%%]", u.Session.PercentUsed, u.Weekly.PercentUsed)
+	s := fmt.Sprintf("[%.0f%%/%.0f%%]", 100-u.Session.PercentUsed, 100-u.Weekly.PercentUsed)
 	if !color {
 		return s
 	}
@@ -34,9 +36,12 @@ func renderRow(nb fetcher.NamedBucket, warn, alert int, color bool) string {
 	const labelWidth = 8
 	const barWidth = 20
 
+	// Battery-style: the visible bar represents how much capacity is
+	// still LEFT in the bucket. As usage grows, the bar drains.
+	remaining := 100.0 - nb.PercentUsed
 	label := pad(nb.Name, labelWidth)
-	bar := progressBar(nb.PercentUsed, barWidth)
-	pct := fmt.Sprintf("%3.0f%%", nb.PercentUsed)
+	bar := progressBar(remaining, barWidth)
+	pct := fmt.Sprintf("%3.0f%%", remaining)
 	reset := resetHint(nb.ResetsAt)
 
 	row := fmt.Sprintf("%s  %s  %s  %s", label, bar, pct, reset)
